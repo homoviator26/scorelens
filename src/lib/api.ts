@@ -45,8 +45,10 @@ function getSupabaseConfig(): { url: string; anonKey: string } {
 export async function analyzePiece(
   pieceQuery: string
 ): Promise<AnalysisResult> {
-  // 세션 캐시 체크 먼저 — 같은 곡 재검색은 서버 안 탐 (카운트도 안 올라감)
-  const cached = getCached(pieceQuery);
+  // 캐시 체크 먼저 — 같은 곡 재검색/재방문은 서버 안 탐 (카운트도 안 올라감).
+  // cache.ts가 메모리 + AsyncStorage(localStorage) 2단계로 캐싱하므로
+  // 페이지 새로고침 후에도 7일간 같은 결과를 즉시 돌려줌.
+  const cached = await getCached(pieceQuery);
   if (cached) return cached;
 
   const { url, anonKey } = getSupabaseConfig();
@@ -114,7 +116,7 @@ export async function analyzePiece(
     throw new ApiError('섹션 정보가 누락되었습니다.');
   }
 
-  // 캐시에 저장
-  setCached(pieceQuery, parsed);
+  // 캐시에 저장 (메모리 + localStorage)
+  await setCached(pieceQuery, parsed);
   return parsed;
 }
